@@ -51,6 +51,10 @@ int loadROM(const char* path);                                  //Loads the rom 
 int resetmem();                                                 //Resets memory, and calls init();
 /*Memory Dump*/
 void memdump(size_t from, size_t to, unsigned int lineSize);    //Dumps memory to std:out for debugging.
+/*Push to stack*/
+int pushstack(unsigned char value);
+/*Pop from stack*/
+unsigned char popstack();
 
 void clearscreen();
                             /*Functions*/
@@ -76,14 +80,30 @@ void printscreen()
 /*Main function*/
 int main()
 {
-<<<<<<< HEAD
     loadROM("./ROMS/INVADERS");
     memdump(0,4096,16);
-=======
-
->>>>>>> 3e03c2c1658079fc6108e55151234234498ae2cf
     return 0;
 }
+
+
+int pushstack(unsigned char value)
+{
+    size_t elements = sizeof(stack) / sizeof(unsigned char);
+    if(elements >= sizeof(stack))
+        return -1;
+    else
+        stack[elements] = value;
+    return 0;
+}
+
+unsigned char popstack()
+{
+    size_t elements = sizeof(stack) / sizeof(unsigned char);
+    unsigned char ret = stack[elements];    //Get element from top and store it.
+    stack[elements] = 0;                    //Erase the element
+    return ret;                             //Return the element.
+}
+
 
 /*Init emulator*/
 int init()
