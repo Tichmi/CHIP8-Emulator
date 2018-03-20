@@ -81,7 +81,7 @@ void printscreen()
 int main()
 {
     loadROM("./ROMS/INVADERS");
-    //memdump(0,4096,16);
+    memdump(0,4096,16);
     return 0;
 }
 
@@ -297,11 +297,11 @@ int loadROM(const char* path)
     if(!rom)
         return -1;
     
-    char c;
+    int c;
     size_t index = 0x200;                   //Start writing into memory at 0x200
-    while(index < 0xFFF)
+    while((c = getc(rom)) != EOF)
     {
-        memory[index] = getc(rom);
+        memory[index] = c;
         index++;
     }
     fclose(rom);                            //Close the file.
