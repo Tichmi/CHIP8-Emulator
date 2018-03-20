@@ -85,7 +85,7 @@ int main()
 {
     srand(time(NULL)); /*seed for random*/
     loadROM("./ROMS/INVADERS");
-    memdump(0,4096,16);
+    //memdump(0,4096,16);
     return 0;
 }
 
@@ -348,7 +348,7 @@ void clockcycle()
                     //load registers v0-vr from location I onwards 	as above. 
                     for(size_t i = 0; i <= (memory[PC] & 0x0F00) >> 8; i++)
                     {
-                        V[i] = memory[I]
+                        V[i] = memory[I];
                         I+=1;
                     }
                     break;
@@ -388,11 +388,11 @@ int loadROM(const char* path)
     if(!rom)
         return -1;
     
-    int c;
+    char c;
     size_t index = 0x200;                   //Start writing into memory at 0x200
     while((c = getc(rom)) != EOF)
     {
-        memory[index] = c;
+        memory[index] = getc(rom);
         index++;
     }
     fclose(rom);                            //Close the file.
