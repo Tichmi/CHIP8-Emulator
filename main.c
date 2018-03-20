@@ -13,12 +13,12 @@ Memory map:
 /* V[0x0]-V[0xE]. 
 /* V[0x10]=Carry flag.
 */
-unsigned char Vregisters[16];
+unsigned char V[16];
 
 /*Index register*/
-unsigned short index;
+unsigned short I;
 /*Program counter*/
-unsigned short pc;
+unsigned short PC;
 
 /*Screen*/ 
 unsigned char gfx[64*32]; /*Pixel states 1 or 0, black or white.*/
@@ -30,7 +30,7 @@ unsigned char sound_timer; /*Beep if sound_timer hits zero*/
 /*Stack*/
 unsigned short stack[16];
 /*Stack pointer*/
-unsigned short sp;
+unsigned short SP;
 
 /*Keypad*/
 unsigned char key[16]; /*0x0-0xF*/
@@ -43,10 +43,27 @@ int init();
 /*Reset and load rom into memory.*/
 int loadROM(char* path);
 
+/*Print screen to stdout*/
+void printscreen()
+{
+    for(int y = 0; y < 32; y++)
+    {
+        for(int x = 0; x < 64; x++)
+        {
+            if(gfx[x + y * 64])
+                putchar('#');
+            else
+                putchar(' ');
+        }
+        putchar('\n');
+    }
+    return;
+}
+
 /*Main function*/
 int main()
 {
-    
+
     return 0;
 }
 
