@@ -262,6 +262,7 @@ void clockcycle()
         case 0x0a:
             //Load index register with constant xxx 
             I = (memory[PC] & 0x0FFF);
+            PC+=2;
             break;
         case 0x0b:
             //Jump to address xxx+register v0 
@@ -270,13 +271,14 @@ void clockcycle()
         case 0x0c:
             //vr = random number less than or equal to xxx 
             V[(memory[PC] & 0x0F00) >> 8] = rand() % ((memory[PC] & 0x00FF)+1);
+            PC+=2;
             break;
         case 0x0d:
             switch(memory[PC] & 0x000F)
              {
                 case 0x00:
                     //Draws extended sprite at screen location rx,ry 	As above,but sprite is always 16 x 16. Superchip only, not yet implemented
-                    
+
                     break;
                 default:
                     //Draw sprite at screen location rx,ry height s 	Sprites stored in memory at location in index register, maximum 8 bits wide. Wraps around the screen. If when drawn,
@@ -300,18 +302,26 @@ void clockcycle()
             {
                 case 0x07:
                     //get delay timer into vr 
+                    V[memory[PC] & 0x0F00 >> 8] = delay_timer;
+                    PC+=2;
                     break;
                 case 0x0a:
                     //wait for for keypress,put key in register vr 
+
                     break;
                 case 0x15:
-                    //set the delay timer to vr               
+                    //set the delay timer to vr   
+                    delay_timer =  V[memory[PC] & 0x0F00 >> 8];     
+                    PC+=2;      
                     break;
                 case 0x18:
                     //set the sound timer to vr 
+                    sound_timer =  V[memory[PC] & 0x0F00 >> 8];     
+                    PC+=2;
                     break;
                 case 0x1e:
                     //add register vr to the index register 
+                    I +=  V[memory[PC] & 0x0F00 >> 8];     
                     break;
                 case 0x29:
                     //point I to the sprite for hexadecimal character in vr 	Sprite is 5 bytes high 
@@ -321,12 +331,26 @@ void clockcycle()
                     break;
                 case 0x33:
                     //store the bcd representation of register vr at location I,I+1,I+2 	Doesn't change I 
+                    memory[I]     = (V[(memory[PC] & 0x0F00) >> 8] / 100);
+                    memory[I + 1] = (V[(memory[PC] & 0x0F00) >> 8] / 10) % 10;
+                    memory[I + 2] = (V[(memory[PC] & 0x0F00) >> 8] % 100) % 10;
+                    PC += 2;
                     break;
                 case 0x55:
                     //store registers v0-vr at location I onwards 	I is incremented to point to the next location on. e.g. I = I + r + 1 
+                    for(size_t i = 0; i <= (memory[PC] & 0x0F00) >> 8; i++)
+                    {
+                        memory[I] = V[i];
+                        I+=1;
+                    }
                     break;
                 case 0x65:
                     //load registers v0-vr from location I onwards 	as above. 
+                    for(size_t i = 0; i <= (memory[PC] & 0x0F00) >> 8; i++)
+                    {
+                        V[i] = memory[I]
+                        I+=1;
+                    }
                     break;
             }
             break;
