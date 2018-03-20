@@ -36,7 +36,7 @@ unsigned short sp;
 unsigned char key[16]; /*0x0-0xF*/
 
 /*Clockspeed*/
-unsigned int Clockspeed = 60;
+unsigned int clockspeed = 60;
 
 /*Init emulator*/
 int init();
