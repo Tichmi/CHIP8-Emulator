@@ -81,7 +81,7 @@ void printscreen()
 int main()
 {
     loadROM("./ROMS/INVADERS");
-    memdump(0,4096,16);
+    //memdump(0,4096,16);
     return 0;
 }
 
@@ -89,11 +89,11 @@ int main()
 int pushstack(unsigned char value)
 {
     size_t elements = sizeof(stack) / sizeof(unsigned char);
-    if(elements >= sizeof(stack))
-        return -1;
+    if(elements >= sizeof(stack))           //Check if stack is already full
+        return -1;                          //Return error
     else
-        stack[elements] = value;
-    return 0;
+        stack[elements] = value;            //Set top of the stack to the value.
+    return 0;                               //Return without error
 }
 
 unsigned char popstack()
@@ -104,6 +104,10 @@ unsigned char popstack()
     return ret;                             //Return the element.
 }
 
+void clearscreen()
+{
+     memset(&gfx[0], 0, sizeof(gfx));
+}
 
 /*Init emulator*/
 int init()
@@ -170,7 +174,7 @@ void clockcycle()
                     break;
                 case 0x03:
                     //exclusive or register ry into register rx 
-                    break:
+                    break;
                 case 0x04:
                     //add register vy to vr,carry in vf 
                     break;
@@ -197,7 +201,7 @@ void clockcycle()
         case 0x0b:
             //Jump to address xxx+register v0 
             break;
-        case 0x0c
+        case 0x0c:
             //vr = random number less than or equal to xxx 
             break;
         case 0x0d:
@@ -276,11 +280,11 @@ void memdump(size_t from, size_t to, unsigned int linesize)
 {
 
     printf("MEMDUMP:\r\n");
-    printf("0x%03X: ",from);
+    printf("0x%03X: ",(unsigned int)from);
     for(size_t i = from; i < to; i++)
     {
         if(i % linesize == 0 && i > 0)
-            printf("\r\n0x%03X: ", i);
+            printf("\r\n0x%03X: ", (unsigned int)i);
             
          printf(" %02X",memory[i]);
     }
@@ -295,7 +299,7 @@ int loadROM(const char* path)
     
     char c;
     size_t index = 0x200;                   //Start writing into memory at 0x200
-    while((index < 0xFFF)
+    while(index < 0xFFF)
     {
         memory[index] = getc(rom);
         index++;
