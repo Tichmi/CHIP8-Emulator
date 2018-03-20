@@ -31,7 +31,7 @@ unsigned char sound_timer; //Beep if sound_timer hits zero
 /*Stack*/
 unsigned short stack[16];
 /*Stack pointer*/
-unsigned short sp;
+unsigned short SP;
 
 /*Keypad*/
 unsigned char key[16]; /*0x0-0xF*/
@@ -56,11 +56,32 @@ void clearscreen();
                             /*Functions*/
 
 
+/*Print screen to stdout*/
+void printscreen()
+{
+    for(int y = 0; y < 32; y++)
+    {
+        for(int x = 0; x < 64; x++)
+        {
+            if(gfx[x + y * 64])
+                putchar('#');
+            else
+                putchar(' ');
+        }
+        putchar('\n');
+    }
+    return;
+}
+
 /*Main function*/
 int main()
 {
+<<<<<<< HEAD
     loadROM("./ROMS/INVADERS");
     memdump(0,4096,16);
+=======
+
+>>>>>>> 3e03c2c1658079fc6108e55151234234498ae2cf
     return 0;
 }
 
