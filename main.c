@@ -1,5 +1,8 @@
 #include <stdio.h>
+#include <time.h>
+#include <stdlib.h>
 #include <string.h>
+
 
 /*4k Memory*/
 unsigned char memory[4096];
@@ -80,6 +83,7 @@ void printscreen()
 /*Main function*/
 int main()
 {
+    srand(time(NULL)); /*seed for random*/
     loadROM("./ROMS/INVADERS");
     //memdump(0,4096,16);
     return 0;
@@ -118,13 +122,16 @@ int init()
 
 void clockcycle()
 {
+
     switch(memory[PC] & 0x00FF)
     {
         case 0xE0:
             clearscreen();
+            PC+=2;
             break;
         case 0xEE:
-            //Return from subroutine call
+            PC = popstack(); //Return from subroutine call
+            PC+=2;
             break;
         case 0xFB:
             //scroll screen 4 pixels right 	Super only,not implemented 
@@ -140,75 +147,136 @@ void clockcycle()
             break;
     }
 
-    switch(memory[PC] & 0xF000)
+    switch((memory[PC] & 0xF000) >> 12)
     {
         case 0x01:
-            //jump to address xxx 
+            PC = memory[PC] & 0x0FFF; //jump to address xxx 
             break;
         case 0x02:
             //jump to subroutine at address xxx 	16 levels maximum 
+            pushstack(PC + 1);
+            PC = memory[PC] & 0x0FFF;
             break;
         case 0x03:
             //skip if register r = constant 
+            if(V[(memory[PC] & 0x0F00) >> 8] == memory[PC] & 0x00FF)
+                PC += 4;
+            else
+                PC+=2;
             break;
         case 0x04:
-            //skip if register r <> constant 
+            //skip if register r != constant 
+            if(V[(memory[PC] & 0x0F00) >> 8] != memory[PC] & 0x00FF)
+                PC += 4;
+            else
+                PC+=2;
             break;
         case 0x05:
-            //skip f register r = register y 
+            //skip if register r = register y 
+            if(V[(memory[PC] & 0x0F00) >> 8] == V[(memory[PC] & 0x0F0) >> 4])
+                PC += 4; //Skip
+            else
+                PC+=2;
             break;
         case 0x06:
             //move constant to register r 
+            V[(memory[PC] & 0x0F00) >> 8] = memory[PC] & 0x00FF;
+            PC+=2;
+            break;
+        case 0x07:
+            //add constant to register r 	No carry generated 
+            V[(memory[PC] & 0x0F00) >> 8] += memory[PC] & 0x00FF;
+            PC+=2;
             break;
         case 0x08:
             switch(memory[PC] & 0x000F)
             {
                 case 0x00:
                     //move register vy into vr 
+                    V[(memory[PC] & 0x0F00) >> 8] = V[(memory[PC] & 0x00F0) >> 4];
+                    PC+=2;
                     break;
                 case 0x01:
                     //or register vy into register vx 
+                    V[(memory[PC] & 0x0F00) >> 8] = V[(memory[PC] & 0x0F00) >> 8] | V[(memory[PC] & 0x00F0) >> 4];
+                    PC+=2;
                     break;
                 case 0x02:
                     //and register vy into register vx 
+                    V[(memory[PC] & 0x0F00) >> 8] = V[(memory[PC] & 0x0F00) >> 8] & V[(memory[PC] & 0x00F0) >> 4];
+                    PC+=2;
                     break;
                 case 0x03:
                     //exclusive or register ry into register rx 
+                    V[(memory[PC] & 0x0F00) >> 8] = V[(memory[PC] & 0x0F00) >> 8] ^ V[(memory[PC] & 0x00F0) >> 4];
+                    PC+=2;
                     break;
                 case 0x04:
                     //add register vy to vr,carry in vf 
+                    if(V[(memory[PC] & 0x00F0) >> 4] > (0xFF - V[(memory[PC] & 0x0F00) >> 8]))
+                        V[0xF] = 1; //carry
+                    else
+                        V[0xF] = 0;
+                    V[(memory[PC] & 0x0F00) >> 8] += V[(memory[PC] & 0x00F0) >> 4];              
+                    PC+=2;
                     break;
                 case 0x05:
-                    //subtract register vy from vr,borrow in vf 	vf set to 1 if borroesws 
+                    //subtract register vy from vr,borrow in vf     vf set to 1 if borroesws 
+                    if(V[(memory[PC] & 0x00F0) >> 4] > (V[(memory[PC] & 0x0F00) >> 8]))
+                        V[0xF] = 1; //borrow
+                    else
+                        V[0xF] = 0;
+                    V[(memory[PC] & 0x0F00) >> 8] -= V[(memory[PC] & 0x00F0) >> 4];              
+                    PC+=2;
                     break;
                 case 0x06:
                     //shift register vy right, bit 0 goes into register vf 
+                    V[0xF] = V[(memory[PC] & 0x0F00) >> 8] & 0b00000001;
+                    V[(memory[PC] & 0x0F00) >> 8] = V[(memory[PC] & 0x0F00) >> 8] >> 1;
+                    PC += 2;
                     break;
                 case 0x07:
-                    //shift register vr left,bit 7 goes into register vf 
+                    //subtract register vr from register vy, result in vr 	vf set to 1 if borrows 
+                        if(V[(memory[PC] & 0x0F00) >> 8] > V[(memory[PC] & 0x00F0) >> 4])
+                        V[0xF] = 1; //borrow
+                    else
+                        V[0xF] = 0;
+                    V[(memory[PC] & 0x00F0) >> 4] -= V[(memory[PC]& 0x0F00) >> 8];              
+                    PC+=2;
                     break;
                 case 0x0e:
                     //shift register vr left,bit 7 goes into register vf 
+                    V[0xF] = ((V[(memory[PC] & 0x0F00) >> 8] & 0b10000000) >> 7);
+                    V[(memory[PC] & 0x0F00) >> 8] = V[(memory[PC] & 0x0F00) >> 8] >> 1;
+                    PC += 2;
                     break;
             }
             break;
         case 0x09:
             //skip if register rx <> register ry 
+            if(V[(memory[PC] & 0x0F00) >> 8] != V[(memory[PC] & 0x00F0) >> 4])
+                PC+= 4;
+            else
+                PC+= 2;
             break;
         case 0x0a:
             //Load index register with constant xxx 
+            I = (memory[PC] & 0x0FFF);
             break;
         case 0x0b:
             //Jump to address xxx+register v0 
+            PC = (memory[PC] & 0x0FFF) + V[0];
             break;
         case 0x0c:
             //vr = random number less than or equal to xxx 
+            V[(memory[PC] & 0x0F00) >> 8] = rand() % ((memory[PC] & 0x00FF)+1);
             break;
         case 0x0d:
             switch(memory[PC] & 0x000F)
              {
                 case 0x00:
                     //Draws extended sprite at screen location rx,ry 	As above,but sprite is always 16 x 16. Superchip only, not yet implemented
+                    
                     break;
                 default:
                     //Draw sprite at screen location rx,ry height s 	Sprites stored in memory at location in index register, maximum 8 bits wide. Wraps around the screen. If when drawn,
@@ -228,7 +296,7 @@ void clockcycle()
              }
             break;
         case 0x0f:
-            switch(memory[PC] & 0X00ff)
+            switch(memory[PC] & 0X00FF)
             {
                 case 0x07:
                     //get delay timer into vr 
@@ -266,7 +334,6 @@ void clockcycle()
                 //Invalid instruction
                 break;
     }
-    PC++;
 }
 
 /*Memory functions*/
@@ -299,7 +366,7 @@ int loadROM(const char* path)
     
     char c;
     size_t index = 0x200;                   //Start writing into memory at 0x200
-    while(index < 0xFFF)
+    while((c = getc(rom)) != EOF)
     {
         memory[index] = getc(rom);
         index++;
