@@ -581,11 +581,11 @@ int loadROM(const char* path)
     if(!rom)
         return -1;
     
-    char c;
+    int c;
     size_t index = 0x200;                   //Start writing into memory at 0x200
     while((c = getc(rom)) != EOF)
     {
-        memory[index] = getc(rom);
+        memory[index] = (unsigned char)c;
         index++;
     }
     fclose(rom);                            //Close the file.
