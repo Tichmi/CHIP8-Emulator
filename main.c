@@ -4,12 +4,6 @@
 #include <string.h>
 #include <SDL.h>
 
-<<<<<<< HEAD
-
-=======
-#define WIDTH 64
-#define HEIGHT 32
->>>>>>> SDL
 /*4k Memory*/
 unsigned char memory[4096];
 /*
@@ -160,15 +154,6 @@ int main()
     drawingtest(renderer);
 
 
-    SDL_DestroyRenderer(renderer);
-    SDL_DestroyWindow(window);
-    SDL_Quit();
-
-    return 0;
-}
-
-/*Loads the fontset into the memory.*/
-void loadfont()
 {
    unsigned char fontset[16][5] = {
                             {0xF0, 0x90, 0x90,0x90, 0xF0},   //0
