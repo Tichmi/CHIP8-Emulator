@@ -44,7 +44,7 @@ unsigned short SP;
 
 /*Keypad*/
 unsigned char key[16]; /*0x0-0xF*/
-
+int keymap[16];
 /*Clockspeed*/
 unsigned int clockspeed = 60;
 unsigned short drawflag = 0; 
@@ -77,6 +77,12 @@ void initSDL();
 /*Destroy window and renderer*/
 void quitSDL();
 void clearscreen();
+/*Loads the keymap*/
+void loadkeys();
+/*Returns 1 when the corresponding key is down. Warning: will remove other events. Use updatekeystates instead.*/
+int iskeydown(unsigned char keynum);
+/*Updates all key states*/
+void updatekeystates();
                             /*Functions*/
 
 
@@ -139,10 +145,10 @@ int main()
 {
     SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO); 
     initSDL();
-    
     init();
     srand(time(NULL)); /*seed for random*/
     loadROM("./ROMS/INVADERS");
+<<<<<<< HEAD
     memdump(0x200,4096,16);
     
     while(1)
@@ -151,6 +157,9 @@ int main()
         clockcycle();
     }
 
+=======
+    //memdump(0,4096,16);
+>>>>>>> 04e6cef3c7653c94d03a8d936a22ce6a7cf5c2f4
 
     quitSDL();
     return 0;
@@ -183,6 +192,73 @@ void quitSDL()
     SDL_DestroyWindow(window);
     SDL_Quit();
     return;
+}
+
+void loadkeys()
+{
+    keymap[0]=SDLK_KP_0;
+    keymap[1]=SDLK_KP_7;
+    keymap[2]=SDLK_KP_8;
+    keymap[3]=SDLK_KP_9;
+    keymap[4]=SDLK_KP_4;
+    keymap[5]=SDLK_KP_5;
+    keymap[6]=SDLK_KP_6;
+    keymap[7]=SDLK_KP_1;
+    keymap[8]=SDLK_KP_2;
+    keymap[9]=SDLK_KP_3;
+    keymap[10]=SDLK_KP_PERIOD;
+    keymap[11]=SDLK_KP_ENTER;
+    keymap[12]=SDLK_KP_DIVIDE;
+    keymap[13]=SDLK_KP_MULTIPLY;
+    keymap[14]=SDLK_KP_MINUS;
+    keymap[15]=SDLK_KP_PLUS;
+    for(int i = 0; i < 16; i++)
+    {
+        key[i] = 0;
+    }
+}
+
+void updatekeystates()
+{
+    SDL_Event event;
+    while (SDL_PollEvent(&event))
+    {
+        if (event.type == SDL_KEYDOWN)
+        {
+            for (int i = 0; i < 16; i++)
+            {
+                if (event.key.keysym.sym == keymap[i])
+                {
+                    key[i] = 1;
+                }
+            }
+        }
+        else if (event.type == SDL_KEYUP)
+        {
+            for (int i = 0; i < 16; i++)
+            {
+                if (event.key.keysym.sym == keymap[i])
+                {
+                    key[i] = 0;
+                }
+            }
+        }
+    }
+    return;
+}
+
+/*Returns 1 when the corresponding key is down, 0 when not, may result in unwanted removal of events*/
+int iskeydown(unsigned char keynum)
+{
+    SDL_Event event;
+    while (SDL_PollEvent(&event))
+    {
+        if (event.type == SDL_KEYDOWN && event.key.keysym.sym == keymap[keynum])
+        {
+            return 1;
+        }
+    }
+    return 0;
 }
 
 void loadfont()
@@ -589,6 +665,7 @@ int loadROM(const char* path)
     {
         printf("ERROR OPENING FILE.");
         return -1;
+<<<<<<< HEAD
     }
     fseek(rom , 0 , SEEK_END);
 	long filesize = ftell(rom);
@@ -600,6 +677,15 @@ int loadROM(const char* path)
     if(filesize > 0xFFF - 0x200)
     {
         printf("ERROR: FILE TOO BIG.");
+=======
+    
+    int c;
+    size_t index = 0x200;                   //Start writing into memory at 0x200
+    while((c = getc(rom)) != EOF)
+    {
+        memory[index] = (unsigned char)c;
+        index++;
+>>>>>>> 04e6cef3c7653c94d03a8d936a22ce6a7cf5c2f4
     }
 	rewind(rom);
     char * buffer = (char*)calloc(filesize,sizeof(char));   //Allocate memory for the file
