@@ -51,6 +51,8 @@ unsigned int clockspeed = 60;
 int w_width = 640;
 int w_height = 320;
 
+SDL_Window* window;
+SDL_Renderer* renderer;
                             /*Prototypes*/
 /*Init emulator*/
 int init();
@@ -68,7 +70,10 @@ void memdump(size_t from, size_t to, unsigned int lineSize);    //Dumps memory t
 int pushstack(unsigned char value);
 /*Pop from stack*/
 unsigned char popstack();
-
+/*Init SDL, create window and renderer*/
+void initSDL();
+/*Destroy window and renderer*/
+void quitSDL();
 void clearscreen();
                             /*Functions*/
 
@@ -113,6 +118,7 @@ void drawframe(SDL_Renderer* renderer)
 
 void drawingtest(SDL_Renderer* renderer)
 {
+    printf("start");
     for(int i = 0; i < 32; i++)
         {
             gfx[i*64+i]=0x01;
@@ -130,14 +136,23 @@ void drawingtest(SDL_Renderer* renderer)
 /*Main function*/
 int main()
 {
+    SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO); 
+    initSDL();
+    
     init();
     srand(time(NULL)); /*seed for random*/
     loadROM("./ROMS/INVADERS");
     //memdump(0,4096,16);
-    // Initialize SDL2
-    SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO); 
-    SDL_Window *window;
-    SDL_Renderer* renderer;
+    
+    drawingtest(renderer);
+    printf("end");
+    quitSDL();
+    return 0;
+}
+
+// Initialize graphics
+void initSDL()
+{
     window = SDL_CreateWindow
     (
         "CHIP-8 Emulator", 
@@ -153,9 +168,15 @@ int main()
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
     SDL_RenderClear(renderer);
     SDL_RenderPresent(renderer);
-    
-    drawingtest(renderer);
-    return 0;
+    return;
+}
+
+void quitSDL()
+{
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
+    SDL_Quit();
+    return;
 }
 
 void loadfont()
