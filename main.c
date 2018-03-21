@@ -102,7 +102,6 @@ void drawframe(SDL_Renderer* renderer)
                 SDL_RenderDrawPoint(renderer, x, y);
             }  
         }
-        putchar('\n');
     }
     SDL_RenderPresent(renderer);
     return;
@@ -151,7 +150,7 @@ int main()
     //loadROM("./ROMS/INVADERS");
     //memdump(0,4096,16);
 
-    
+
     SDL_DestroyRenderer(renderer);
     SDL_DestroyWindow(window);
     SDL_Quit();
