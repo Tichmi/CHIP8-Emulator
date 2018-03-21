@@ -118,7 +118,6 @@ void drawframe(SDL_Renderer* renderer)
 
 void drawingtest(SDL_Renderer* renderer)
 {
-    printf("start");
     for(int i = 0; i < 32; i++)
         {
             gfx[i*64+i]=0x01;
@@ -145,7 +144,6 @@ int main()
     //memdump(0,4096,16);
     
     drawingtest(renderer);
-    printf("end");
     quitSDL();
     return 0;
 }
@@ -162,7 +160,7 @@ void initSDL()
         w_height,
         SDL_WINDOW_OPENGL
     );
-    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_SOFTWARE);
     SDL_SetHint (SDL_HINT_RENDER_SCALE_QUALITY, "linear");
     SDL_RenderSetLogicalSize(renderer, 64, 32);
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
