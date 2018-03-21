@@ -148,18 +148,7 @@ int main()
     init();
     srand(time(NULL)); /*seed for random*/
     loadROM("./ROMS/INVADERS");
-<<<<<<< HEAD
-    memdump(0x200,4096,16);
-    
-    while(1)
-    {
-        sleep(1);
-        clockcycle();
-    }
-
-=======
     //memdump(0,4096,16);
->>>>>>> 04e6cef3c7653c94d03a8d936a22ce6a7cf5c2f4
 
     quitSDL();
     return 0;
@@ -664,38 +653,15 @@ int loadROM(const char* path)
     if(!rom)
     {
         printf("ERROR OPENING FILE.");
-        return -1;
-<<<<<<< HEAD
+        return -1
     }
-    fseek(rom , 0 , SEEK_END);
-	long filesize = ftell(rom);
-    if(filesize <= 0)
-    {
-        printf("ERROR: FILESIZE = 0");
-        return -1;
-    }
-    if(filesize > 0xFFF - 0x200)
-    {
-        printf("ERROR: FILE TOO BIG.");
-=======
-    
     int c;
     size_t index = 0x200;                   //Start writing into memory at 0x200
     while((c = getc(rom)) != EOF)
     {
         memory[index] = (unsigned char)c;
         index++;
->>>>>>> 04e6cef3c7653c94d03a8d936a22ce6a7cf5c2f4
     }
-	rewind(rom);
-    char * buffer = (char*)calloc(filesize,sizeof(char));   //Allocate memory for the file
-    fread(buffer, 1, filesize, rom);                        //Read file into buffer                            
-    //Copy buffer to memory
-	for(size_t i = 0x200; i < filesize; ++i)
-		memory[i] = buffer[i];
-
-	          
-	free(buffer);                           //free memory. 
     fclose(rom);                            //Close the file.
     return 0;
 }
