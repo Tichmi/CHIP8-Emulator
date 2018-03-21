@@ -1,6 +1,9 @@
 #include <stdio.h>
 #include <string.h>
+#include <SDL.h>
 
+#define WIDTH 64
+#define HEIGHT 32
 /*4k Memory*/
 unsigned char memory[4096];
 /*
@@ -22,7 +25,9 @@ unsigned short I;
 unsigned short PC;
 
 /*Screen*/ 
-unsigned char gfx[64*32]; //Pixel states 1 or 0, black or white.
+const unsigned char width = WIDTH;
+const unsigned char height = HEIGHT;
+unsigned char gfx[WIDTH*HEIGHT]; //Pixel states 1 or 0, black or white.
 
 /*Timers. If >0 count down to 0*/
 unsigned char delay_timer;
@@ -38,6 +43,10 @@ unsigned char key[16]; /*0x0-0xF*/
 
 /*Clockspeed*/
 unsigned int clockspeed = 60;
+
+/*SDL*/
+int w_width = 640;
+int w_height = 320;
 
                             /*Prototypes*/
 /*Init emulator*/
@@ -77,11 +86,76 @@ void printscreen()
     return;
 }
 
+/*Draw a new frame to the window*/
+void drawframe(SDL_Renderer* renderer)
+{
+    // Clear before drawing
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+    SDL_RenderClear(renderer);
+    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 200);
+    for(int y = 0; y < 32; y++)
+    {
+        for(int x = 0; x < 64; x++)
+        {
+            if(gfx[x + y * 64])
+            {
+                SDL_RenderDrawPoint(renderer, x, y);
+            }  
+        }
+        putchar('\n');
+    }
+    SDL_RenderPresent(renderer);
+    return;
+}
+
+void drawingtest(SDL_Renderer* renderer)
+{
+    for(int i = 0; i < 32; i++)
+        {
+            gfx[i*64+i]=0x01;
+            drawframe(renderer);
+            SDL_Delay(16);
+        }
+    for(int i = 63; i >= 32; i--)
+        {
+            gfx[(63-i)*64+i]=0x01;
+            drawframe(renderer);
+            SDL_Delay(16);
+        }
+}
+
 /*Main function*/
 int main()
 {
-    loadROM("./ROMS/INVADERS");
-    memdump(0,4096,16);
+    // Initialize SDL2
+    SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO); 
+    SDL_Window *window;
+    SDL_Renderer* renderer;
+    window = SDL_CreateWindow
+    (
+        "CHIP-8 Emulator", 
+        SDL_WINDOWPOS_UNDEFINED, 
+        SDL_WINDOWPOS_UNDEFINED, 
+        w_width, 
+        w_height,
+        SDL_WINDOW_OPENGL
+    );
+    renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_ACCELERATED);
+    SDL_SetHint (SDL_HINT_RENDER_SCALE_QUALITY, "linear");
+    SDL_RenderSetLogicalSize(renderer, 64, 32);
+    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+    SDL_RenderClear(renderer);
+    SDL_RenderPresent(renderer);
+    
+    drawingtest(renderer);
+    //loadROM("./ROMS/INVADERS");
+    //memdump(0,4096,16);
+
+    
+    SDL_DestroyRenderer(renderer);
+    SDL_DestroyWindow(window);
+    SDL_Quit();
+
     return 0;
 }
 
