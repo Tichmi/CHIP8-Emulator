@@ -148,18 +148,14 @@ int main()
     init();
     srand(time(NULL)); /*seed for random*/
     loadROM("./ROMS/INVADERS");
-<<<<<<< HEAD
     memdump(0x200,4096,16);
     
     while(1)
     {
-        sleep(1);
+        //sleep(1);
         clockcycle();
     }
 
-=======
-    //memdump(0,4096,16);
->>>>>>> 04e6cef3c7653c94d03a8d936a22ce6a7cf5c2f4
 
     quitSDL();
     return 0;
@@ -322,7 +318,7 @@ void clearscreen()
 /*Init emulator*/
 int init()
 {
-    PC = 0x201;
+    PC = 0x200;
     SP = 0x00;
     //resetmem();
     loadfont();
@@ -575,13 +571,17 @@ void clockcycle()
                     break;
                 case 0x1e:
                     //add register vr to the index register 
-                    I +=  V[(opcode & 0x0F00) >> 8];     
+                    I +=  V[(opcode & 0x0F00) >> 8];    
+                    PC+=2; 
                     break;
                 case 0x29:
                     //point I to the sprite for hexadecimal character in vr 	Sprite is 5 bytes high 
+                    I = V[(opcode & 0x0F00) >> 8] * 0x5;
+                    PC+=2; 
                     break;
                 case 0x30:
                     //point I to the sprite for hexadecimal character in vr 	Sprite is 10 bytes high,Super only 
+                    PC+=2; 
                     break;
                 case 0x33:
                     //store the bcd representation of register vr at location I,I+1,I+2 	Doesn't change I 
@@ -617,7 +617,7 @@ void clockcycle()
     if(drawflag)
     {
         //drawframe();
-        printscreen();
+        drawframe();
         drawflag = 0;
     }
 
@@ -662,22 +662,7 @@ int loadROM(const char* path)
 {
     FILE* rom = fopen(path,"rb");
     if(!rom)
-    {
-        printf("ERROR OPENING FILE.");
         return -1;
-<<<<<<< HEAD
-    }
-    fseek(rom , 0 , SEEK_END);
-	long filesize = ftell(rom);
-    if(filesize <= 0)
-    {
-        printf("ERROR: FILESIZE = 0");
-        return -1;
-    }
-    if(filesize > 0xFFF - 0x200)
-    {
-        printf("ERROR: FILE TOO BIG.");
-=======
     
     int c;
     size_t index = 0x200;                   //Start writing into memory at 0x200
@@ -685,17 +670,8 @@ int loadROM(const char* path)
     {
         memory[index] = (unsigned char)c;
         index++;
->>>>>>> 04e6cef3c7653c94d03a8d936a22ce6a7cf5c2f4
     }
-	rewind(rom);
-    char * buffer = (char*)calloc(filesize,sizeof(char));   //Allocate memory for the file
-    fread(buffer, 1, filesize, rom);                        //Read file into buffer                            
-    //Copy buffer to memory
-	for(size_t i = 0x200; i < filesize; ++i)
-		memory[i] = buffer[i];
-
-	          
-	free(buffer);                           //free memory. 
     fclose(rom);                            //Close the file.
     return 0;
 }
+
