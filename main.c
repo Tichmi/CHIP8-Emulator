@@ -2,6 +2,7 @@
 #include <time.h>
 #include <stdlib.h>
 #include <string.h>
+#include <unistd.h> //sleep();
 #include <SDL.h>
 
 
@@ -46,6 +47,7 @@ unsigned char key[16]; /*0x0-0xF*/
 
 /*Clockspeed*/
 unsigned int clockspeed = 60;
+unsigned short drawflag = 0; 
 
 /*SDL*/
 int w_width = 640;
@@ -96,7 +98,7 @@ void printscreen()
 }
 
 /*Draw a new frame to the window*/
-void drawframe(SDL_Renderer* renderer)
+void drawframe()
 {
     // Clear before drawing
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
@@ -116,7 +118,7 @@ void drawframe(SDL_Renderer* renderer)
     return;
 }
 
-void drawingtest(SDL_Renderer* renderer)
+void drawingtest()
 {
     for(int i = 0; i < 32; i++)
         {
@@ -141,9 +143,15 @@ int main()
     init();
     srand(time(NULL)); /*seed for random*/
     loadROM("./ROMS/INVADERS");
-    //memdump(0,4096,16);
+    memdump(0x200,4096,16);
     
-    drawingtest(renderer);
+    while(1)
+    {
+        sleep(1);
+        clockcycle();
+    }
+
+
     quitSDL();
     return 0;
 }
@@ -217,6 +225,7 @@ int pushstack(unsigned char value)
         return -1;                          //Return error
     else
         stack[elements] = value;            //Set top of the stack to the value.
+        SP++;
     return 0;                               //Return without error
 }
 
@@ -225,6 +234,7 @@ unsigned char popstack()
     size_t elements = sizeof(stack) / sizeof(unsigned char);
     unsigned char ret = stack[elements];    //Get element from top and store it.
     stack[elements] = 0;                    //Erase the element
+    SP--;
     return ret;                             //Return the element.
 }
 
@@ -236,7 +246,8 @@ void clearscreen()
 /*Init emulator*/
 int init()
 {
-    PC = 0x200;
+    PC = 0x201;
+    SP = 0x00;
     //resetmem();
     loadfont();
     return 0;
@@ -244,172 +255,217 @@ int init()
 
 void clockcycle()
 {
+    unsigned short opcode = memory[PC] << 8 | memory[PC + 1];
+    printf("Current Instruction: 0x%04X \r\n",opcode);
 
-    switch(memory[PC] & 0x00FF)
-    {
-        case 0xE0:
-            clearscreen();
-            PC+=2;
-            break;
-        case 0xEE:
-            PC = popstack(); //Return from subroutine call
-            PC+=2;
-            break;
-        case 0xFB:
-            //scroll screen 4 pixels right 	Super only,not implemented 
-            break;
-        case 0xFC:
-            //scroll screen 4 pixels left 	Super only,not implemented 
-            break;
-        case 0xFE:
-            //disable extended screen mode 	Super only 
-            break;
-        case 0xFF:
-            //enable extended screen mode (128 x 64) 	Super only  
-            break;
-    }
 
-    switch((memory[PC] & 0xF000) >> 12)
+    switch((opcode & 0xF000) >> 12)
     {
+        case 0x00:
+            switch(opcode & 0x00FF)
+            {
+
+                case 0xE0:
+                    clearscreen();
+                    PC+=2;
+                 break;
+                case 0xEE:
+                    PC = popstack(); //Return from subroutine call
+                    PC+=2;
+                 break;
+                case 0xFB:
+                       //scroll screen 4 pixels right 	Super only,not implemented 
+                    break;
+                case 0xFC:
+                    //scroll screen 4 pixels left 	Super only,not implemented 
+                    break;
+                case 0xFE:
+                    //disable extended screen mode 	Super only 
+                    break;
+                case 0xFF:
+                    //enable extended screen mode (128 x 64) 	Super only  
+                    PC += 2;
+                    break;
+                default:
+                    //Invalid instruction
+                    printf("^INVALID INSTRUCTION(0x%04X)\r\n",opcode);
+                    PC+=2;
+                    break;
+            }
+            break;
         case 0x01:
-            PC = memory[PC] & 0x0FFF; //jump to address xxx 
+            PC = opcode & 0x0FFF; //jump to address xxx 
             break;
         case 0x02:
             //jump to subroutine at address xxx 	16 levels maximum 
-            pushstack(PC + 1);
-            PC = memory[PC] & 0x0FFF;
+            pushstack(PC + 2);
+            PC = opcode & 0x0FFF;
             break;
         case 0x03:
             //skip if register r = constant 
-            if(V[(memory[PC] & 0x0F00) >> 8] == memory[PC] & 0x00FF)
+            if(V[(opcode & 0x0F00) >> 8] == opcode & 0x00FF)
                 PC += 4;
             else
                 PC+=2;
             break;
         case 0x04:
             //skip if register r != constant 
-            if(V[(memory[PC] & 0x0F00) >> 8] != memory[PC] & 0x00FF)
+            if(V[(opcode & 0x0F00) >> 8] != opcode & 0x00FF)
                 PC += 4;
             else
                 PC+=2;
             break;
         case 0x05:
             //skip if register r = register y 
-            if(V[(memory[PC] & 0x0F00) >> 8] == V[(memory[PC] & 0x0F0) >> 4])
+            if(V[(opcode & 0x0F00) >> 8] == V[(opcode & 0x0F0) >> 4])
                 PC += 4; //Skip
             else
                 PC+=2;
             break;
         case 0x06:
             //move constant to register r 
-            V[(memory[PC] & 0x0F00) >> 8] = memory[PC] & 0x00FF;
+            V[(opcode & 0x0F00) >> 8] = opcode & 0x00FF;
             PC+=2;
             break;
         case 0x07:
             //add constant to register r 	No carry generated 
-            V[(memory[PC] & 0x0F00) >> 8] += memory[PC] & 0x00FF;
+            V[(opcode & 0x0F00) >> 8] += opcode & 0x00FF;
             PC+=2;
             break;
         case 0x08:
-            switch(memory[PC] & 0x000F)
+            switch(opcode & 0x000F)
             {
                 case 0x00:
                     //move register vy into vr 
-                    V[(memory[PC] & 0x0F00) >> 8] = V[(memory[PC] & 0x00F0) >> 4];
+                    V[(opcode & 0x0F00) >> 8] = V[(opcode & 0x00F0) >> 4];
                     PC+=2;
                     break;
                 case 0x01:
                     //or register vy into register vx 
-                    V[(memory[PC] & 0x0F00) >> 8] = V[(memory[PC] & 0x0F00) >> 8] | V[(memory[PC] & 0x00F0) >> 4];
+                    V[(opcode & 0x0F00) >> 8] = V[(opcode & 0x0F00) >> 8] | V[(opcode & 0x00F0) >> 4];
                     PC+=2;
                     break;
                 case 0x02:
                     //and register vy into register vx 
-                    V[(memory[PC] & 0x0F00) >> 8] = V[(memory[PC] & 0x0F00) >> 8] & V[(memory[PC] & 0x00F0) >> 4];
+                    V[(opcode & 0x0F00) >> 8] = V[(opcode & 0x0F00) >> 8] & V[(opcode & 0x00F0) >> 4];
                     PC+=2;
                     break;
                 case 0x03:
                     //exclusive or register ry into register rx 
-                    V[(memory[PC] & 0x0F00) >> 8] = V[(memory[PC] & 0x0F00) >> 8] ^ V[(memory[PC] & 0x00F0) >> 4];
+                    V[(opcode & 0x0F00) >> 8] = V[(opcode & 0x0F00) >> 8] ^ V[(opcode & 0x00F0) >> 4];
                     PC+=2;
                     break;
                 case 0x04:
                     //add register vy to vr,carry in vf 
-                    if(V[(memory[PC] & 0x00F0) >> 4] > (0xFF - V[(memory[PC] & 0x0F00) >> 8]))
+                    if(V[(opcode & 0x00F0) >> 4] > (0xFF - V[(opcode & 0x0F00) >> 8]))
                         V[0xF] = 1; //carry
                     else
                         V[0xF] = 0;
-                    V[(memory[PC] & 0x0F00) >> 8] += V[(memory[PC] & 0x00F0) >> 4];              
+                    V[(opcode & 0x0F00) >> 8] += V[(opcode & 0x00F0) >> 4];              
                     PC+=2;
                     break;
                 case 0x05:
                     //subtract register vy from vr,borrow in vf     vf set to 1 if borroesws 
-                    if(V[(memory[PC] & 0x00F0) >> 4] > (V[(memory[PC] & 0x0F00) >> 8]))
+                    if(V[(opcode & 0x00F0) >> 4] > (V[(opcode & 0x0F00) >> 8]))
                         V[0xF] = 1; //borrow
                     else
                         V[0xF] = 0;
-                    V[(memory[PC] & 0x0F00) >> 8] -= V[(memory[PC] & 0x00F0) >> 4];              
+                    V[(opcode & 0x0F00) >> 8] -= V[(opcode & 0x00F0) >> 4];              
                     PC+=2;
                     break;
                 case 0x06:
                     //shift register vy right, bit 0 goes into register vf 
-                    V[0xF] = V[(memory[PC] & 0x0F00) >> 8] & 0b00000001;
-                    V[(memory[PC] & 0x0F00) >> 8] = V[(memory[PC] & 0x0F00) >> 8] >> 1;
+                    V[0xF] = V[(opcode & 0x0F00) >> 8] & 0b00000001;
+                    V[(opcode & 0x0F00) >> 8] = V[(opcode & 0x0F00) >> 8] >> 1;
                     PC += 2;
                     break;
                 case 0x07:
                     //subtract register vr from register vy, result in vr 	vf set to 1 if borrows 
-                        if(V[(memory[PC] & 0x0F00) >> 8] > V[(memory[PC] & 0x00F0) >> 4])
+                        if(V[(opcode & 0x0F00) >> 8] > V[(opcode & 0x00F0) >> 4])
                         V[0xF] = 1; //borrow
                     else
                         V[0xF] = 0;
-                    V[(memory[PC] & 0x00F0) >> 4] -= V[(memory[PC]& 0x0F00) >> 8];              
+                    V[(opcode & 0x00F0) >> 4] -= V[(opcode & 0x0F00) >> 8];              
                     PC+=2;
                     break;
                 case 0x0e:
                     //shift register vr left,bit 7 goes into register vf 
-                    V[0xF] = ((V[(memory[PC] & 0x0F00) >> 8] & 0b10000000) >> 7);
-                    V[(memory[PC] & 0x0F00) >> 8] = V[(memory[PC] & 0x0F00) >> 8] >> 1;
+                    V[0xF] = ((V[(opcode & 0x0F00) >> 8] & 0b10000000) >> 7);
+                    V[(opcode & 0x0F00) >> 8] = V[(opcode & 0x0F00) >> 8] >> 1;
                     PC += 2;
+                    break;
+                default:
+                    //Invalid instruction
+                    printf("^INVALID INSTRUCTION(0x%04X)\r\n",opcode);
+                    PC+=2;
                     break;
             }
             break;
         case 0x09:
             //skip if register rx <> register ry 
-            if(V[(memory[PC] & 0x0F00) >> 8] != V[(memory[PC] & 0x00F0) >> 4])
+            if(V[(opcode & 0x0F00) >> 8] != V[(opcode & 0x00F0) >> 4])
                 PC+= 4;
             else
                 PC+= 2;
             break;
         case 0x0a:
             //Load index register with constant xxx 
-            I = (memory[PC] & 0x0FFF);
+            I = (opcode & 0x0FFF);
             PC+=2;
             break;
         case 0x0b:
             //Jump to address xxx+register v0 
-            PC = (memory[PC] & 0x0FFF) + V[0];
+            PC = (opcode & 0x0FFF) + V[0];
             break;
         case 0x0c:
             //vr = random number less than or equal to xxx 
-            V[(memory[PC] & 0x0F00) >> 8] = rand() % ((memory[PC] & 0x00FF)+1);
+            V[(opcode & 0x0F00) >> 8] = rand() % ((opcode & 0x00FF)+1);
             PC+=2;
             break;
         case 0x0d:
-            switch(memory[PC] & 0x000F)
+            switch(opcode & 0x000F)
              {
                 case 0x00:
                     //Draws extended sprite at screen location rx,ry 	As below,but sprite is always 16 x 16. Superchip only, not yet implemented
 
                     break;
                 default:
-                    //Draw sprite at screen location rx,ry height s 	Sprites stored in memory at location in index register, maximum 8 bits wide. Wraps around the screen. If when drawn,
+                    //Draw sprite at screen location rx,ry height s 	Sprites stored in memory at location in index register, maximum 8 bits wide.. If when drawn,
                     //clears a pixel, vf is set to 1 otherwise it is zero. All drawing is xor drawing (e.g. it toggles the screen pixels 
+                    	{
+                        unsigned short x = V[(opcode & 0x0F00) >> 8];
+			            unsigned short y = V[(opcode & 0x00F0) >> 4];
+			            unsigned short height = opcode & 0x000F;
+			            unsigned short currentline;
+
+			            for (int yline = 0; yline < height; yline++)
+			            {
+				            currentline = memory[I + yline];   //Get current line
+				            for(int xline = 0; xline < 8; xline++)  //X - max 8
+				            {
+					            if((currentline & (0x80 >> xline)) != 0)   
+					            {
+						            if(gfx[(x + xline + ((y + yline) * 64))] == 1)
+						            {
+						    	        V[0xF] = 1;                                    
+						            }
+                                    else
+                                    {
+                                        V[0xF] = 0;
+                                    }
+						            gfx[x + xline + ((y + yline) * 64)] ^= 1;
+					            }
+				            }
+			            }      	
+                        drawflag = 1;	
+			            PC += 2;
+                        }
+
                     break;
              }
             break;
         case 0x0e:
-             switch(memory[PC] & 0x00FF)
+             switch(opcode & 0x00FF)
              {
                 case 0x9e:
                     //skip if key (register rk) pressed 	The key is a key number, see the chip-8 documentation 
@@ -420,11 +476,11 @@ void clockcycle()
              }
             break;
         case 0x0f:
-            switch(memory[PC] & 0X00FF)
+            switch(opcode & 0X00FF)
             {
                 case 0x07:
                     //get delay timer into vr 
-                    V[memory[PC] & 0x0F00 >> 8] = delay_timer;
+                    V[(opcode & 0x0F00) >> 8] = delay_timer;
                     PC+=2;
                     break;
                 case 0x0a:
@@ -433,17 +489,17 @@ void clockcycle()
                     break;
                 case 0x15:
                     //set the delay timer to vr   
-                    delay_timer =  V[memory[PC] & 0x0F00 >> 8];     
+                    delay_timer =  V[(opcode & 0x0F00) >> 8];     
                     PC+=2;      
                     break;
                 case 0x18:
                     //set the sound timer to vr 
-                    sound_timer =  V[memory[PC] & 0x0F00 >> 8];     
+                    sound_timer =  V[(opcode & 0x0F00) >> 8];     
                     PC+=2;
                     break;
                 case 0x1e:
                     //add register vr to the index register 
-                    I +=  V[memory[PC] & 0x0F00 >> 8];     
+                    I +=  V[(opcode & 0x0F00) >> 8];     
                     break;
                 case 0x29:
                     //point I to the sprite for hexadecimal character in vr 	Sprite is 5 bytes high 
@@ -453,14 +509,14 @@ void clockcycle()
                     break;
                 case 0x33:
                     //store the bcd representation of register vr at location I,I+1,I+2 	Doesn't change I 
-                    memory[I]     = (V[(memory[PC] & 0x0F00) >> 8] / 100);
-                    memory[I + 1] = (V[(memory[PC] & 0x0F00) >> 8] / 10) % 10;
-                    memory[I + 2] = (V[(memory[PC] & 0x0F00) >> 8] % 100) % 10;
+                    memory[I]     = (V[(opcode & 0x0F00) >> 8] / 100);
+                    memory[I + 1] = (V[(opcode & 0x0F00) >> 8] / 10) % 10;
+                    memory[I + 2] = (V[(opcode & 0x0F00) >> 8] % 100) % 10;
                     PC += 2;
                     break;
                 case 0x55:
                     //store registers v0-vr at location I onwards 	I is incremented to point to the next location on. e.g. I = I + r + 1 
-                    for(size_t i = 0; i <= (memory[PC] & 0x0F00) >> 8; i++)
+                    for(size_t i = 0; i <= (opcode & 0x0F00) >> 8; i++)
                     {
                         memory[I] = V[i];
                         I+=1;
@@ -468,7 +524,7 @@ void clockcycle()
                     break;
                 case 0x65:
                     //load registers v0-vr from location I onwards 	as above. 
-                    for(size_t i = 0; i <= (memory[PC] & 0x0F00) >> 8; i++)
+                    for(size_t i = 0; i <= (opcode & 0x0F00) >> 8; i++)
                     {
                         V[i] = memory[I];
                         I+=1;
@@ -477,9 +533,31 @@ void clockcycle()
             }
             break;
             default:
-                //Invalid instruction
+                    //Invalid instruction
+                    printf("^INVALID INSTRUCTION(0x%04X)\r\n",opcode);
+                    PC+=2;
                 break;
     }
+    if(drawflag)
+    {
+        //drawframe();
+        printscreen();
+        drawflag = 0;
+    }
+
+    if(sound_timer > 0)
+    {
+        sound_timer--;
+        if(sound_timer == 0)
+        {
+            //beep
+        }
+    }
+    if(delay_timer > 0)
+    {
+        delay_timer--;
+    }
+
 }
 
 /*Memory functions*/
@@ -508,15 +586,30 @@ int loadROM(const char* path)
 {
     FILE* rom = fopen(path,"rb");
     if(!rom)
-        return -1;
-    
-    char c;
-    size_t index = 0x200;                   //Start writing into memory at 0x200
-    while((c = getc(rom)) != EOF)
     {
-        memory[index] = getc(rom);
-        index++;
+        printf("ERROR OPENING FILE.");
+        return -1;
     }
+    fseek(rom , 0 , SEEK_END);
+	long filesize = ftell(rom);
+    if(filesize <= 0)
+    {
+        printf("ERROR: FILESIZE = 0");
+        return -1;
+    }
+    if(filesize > 0xFFF - 0x200)
+    {
+        printf("ERROR: FILE TOO BIG.");
+    }
+	rewind(rom);
+    char * buffer = (char*)calloc(filesize,sizeof(char));   //Allocate memory for the file
+    fread(buffer, 1, filesize, rom);                        //Read file into buffer                            
+    //Copy buffer to memory
+	for(size_t i = 0x200; i < filesize; ++i)
+		memory[i] = buffer[i];
+
+	          
+	free(buffer);                           //free memory. 
     fclose(rom);                            //Close the file.
     return 0;
 }
