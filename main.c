@@ -662,8 +662,10 @@ int loadROM(const char* path)
 {
     FILE* rom = fopen(path,"rb");
     if(!rom)
-        return -1;
-    
+    {
+        printf("ERROR OPENING FILE.");
+        return -1
+    }
     int c;
     size_t index = 0x200;                   //Start writing into memory at 0x200
     while((c = getc(rom)) != EOF)
