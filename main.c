@@ -46,6 +46,7 @@ unsigned int clockspeed = 60;
 /*Init emulator*/
 int init();
 
+void loadfont();
 /*one clock cycle*/
 void clockcycle();
 /*Reset and load rom into memory.*/
@@ -83,10 +84,43 @@ void printscreen()
 /*Main function*/
 int main()
 {
+    init();
     srand(time(NULL)); /*seed for random*/
     loadROM("./ROMS/INVADERS");
     //memdump(0,4096,16);
     return 0;
+}
+
+/*Loads the fontset into the memory.*/
+void loadfont()
+{
+   unsigned char fontset[16][5] = {
+                            {0xF0, 0x90, 0x90,0x90, 0xF0},   //0
+                            {0x20, 0x60, 0x20,0x20, 0x70},   //1
+                            {0xF0, 0x10, 0xf0,0x80, 0xF0},   //2
+                            {0xF0, 0x10, 0xF0,0x10, 0xF0},   //3
+                            {0x90, 0x90, 0xF0,0x10, 0x10},   //4
+                            {0xF0, 0x80, 0xF0,0x10, 0xF0},   //5
+                            {0xF0, 0x80, 0xF0,0x90, 0xF0},   //6
+                            {0xF0, 0x10, 0x20,0x40, 0x40},   //7
+                            {0xF0, 0x90, 0xF0,0x90, 0xF0},   //8
+                            {0xF0, 0x90, 0xF0,0x10, 0xF0},   //9
+                            {0xF0, 0x90, 0xF0,0x90, 0x90},   //A
+                            {0xE0, 0x90, 0xE0,0x90, 0xE0},   //B
+                            {0xF0, 0x80, 0x80,0x80, 0xF0},   //C
+                            {0xE0, 0x90, 0x90,0x90, 0xE0},   //D
+                            {0xF0, 0x80, 0xF0,0x80, 0xF0},   //E
+                            {0xF0, 0x80, 0xF0,0x80, 0x80}};  //F
+    size_t i = 0;
+    size_t offset = 0x000;
+    for(size_t y = 0; y < 16; y++)
+    {
+        for(size_t x = 0; x < 5; x++)
+        {
+            memory[i + offset] = fontset[y][x];
+            i++;
+        }
+    }
 }
 
 
@@ -116,7 +150,9 @@ void clearscreen()
 /*Init emulator*/
 int init()
 {
-    PC = 0X200;
+    PC = 0x200;
+    //resetmem();
+    loadfont();
     return 0;
 }
 
@@ -277,7 +313,7 @@ void clockcycle()
             switch(memory[PC] & 0x000F)
              {
                 case 0x00:
-                    //Draws extended sprite at screen location rx,ry 	As above,but sprite is always 16 x 16. Superchip only, not yet implemented
+                    //Draws extended sprite at screen location rx,ry 	As below,but sprite is always 16 x 16. Superchip only, not yet implemented
 
                     break;
                 default:
