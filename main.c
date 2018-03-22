@@ -69,9 +69,9 @@ int resetmem();                                                 //Resets memory,
 /*Memory Dump*/
 void memdump(size_t from, size_t to, unsigned int lineSize);    //Dumps memory to std:out for debugging.
 /*Push to stack*/
-int pushstack(unsigned char value);
+int pushstack(unsigned short value);
 /*Pop from stack*/
-unsigned char popstack();
+unsigned short popstack();
 /*Init SDL, create window and renderer*/
 void initSDL();
 /*Destroy window and renderer*/
@@ -107,17 +107,23 @@ void printscreen()
 void drawframe()
 {
     // Clear before drawing
-    SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
-    SDL_RenderClear(renderer);
-    SDL_SetRenderDrawColor(renderer, 255, 255, 255, 200);
+    //SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+    //SDL_RenderClear(renderer);
+    
     for(int y = 0; y < 32; y++)
     {
         for(int x = 0; x < 64; x++)
         {
             if(gfx[x + y * 64])
             {
+                SDL_SetRenderDrawColor(renderer, 255, 255, 255, 255);
                 SDL_RenderDrawPoint(renderer, x, y);
-            }  
+            } 
+            else
+            {
+                SDL_SetRenderDrawColor(renderer, 0, 0, 0, 255);
+                SDL_RenderDrawPoint(renderer, x, y);
+            }
         }
     }
     SDL_RenderPresent(renderer);
@@ -147,24 +153,34 @@ int main()
     initSDL();
     init();
     srand(time(NULL)); /*seed for random*/
-    loadROM("./ROMS/BLINKY");
+    loadROM("./ROMS/INVADERS");
     memdump(0x200,4096,16);
     SDL_Event event;
+    loadkeys();
     while(1)
     {
+        
+        
+        //while(event.type != SDL_KEYDOWN)
+        //    SDL_WaitEvent(&event);
+
+        //SDL_Delay(16);
+        // clear queue
+        //while (SDL_PollEvent(&event))
+        //{
+            //printf("clearing");
+        //}
+        
+        updatekeystates();
+        SDL_Delay(5);
+        clockcycle();
+        // Exit with backspace, TODO: find a solution that doesn't clear the event queue
         /*
         while(event.type != SDL_KEYDOWN)
             SDL_WaitEvent(&event);
-
-        SDL_Delay(500);
-        // clear queue
-        while (SDL_PollEvent(&event))
-        {
-            //printf("clearing");
-        }
-        */
-        SDL_Delay(16);
-        clockcycle();
+        if(event.key.keysym.sym == SDLK_BACKSPACE)
+            break;
+            */
     }
 
 
@@ -301,25 +317,20 @@ void loadfont()
 }
 
 
-int pushstack(unsigned char value)
+int pushstack(unsigned short value)
 {
-    size_t elements = sizeof(stack) / sizeof(unsigned char);
-    if(elements >= sizeof(stack))           //Check if stack is already full
-        return -1;                          //Return error
-    else
-        stack[elements] = value;            //Set top of the stack to the value.
-        SP++;
-    return 0;                               //Return without error
+    stack[SP] = value;
+    SP++;
+    return 0;
 }
 
-unsigned char popstack()
+unsigned short popstack()
 {
-    size_t elements = sizeof(stack) / sizeof(unsigned char);
-    unsigned char ret = stack[elements];    //Get element from top and store it.
-    stack[elements] = 0;                    //Erase the element
     SP--;
-    return ret;                             //Return the element.
+    unsigned short ret = stack[SP];
+    return ret;                         
 }
+
 
 void clearscreen()
 {
@@ -339,13 +350,13 @@ int init()
 void clockcycle()
 {
     unsigned short opcode = memory[PC] << 8 | memory[PC + 1];
-    
+    /*
     for(int i = 0; i < 16; i++)
         printf("V%x:%d ", i, V[i]);
     printf("I:%d SP:%d", I, SP);
     printf("\n");
     printf("PC:0x%x \t0x%04X \r\n",PC,opcode);
-
+    */
     switch((opcode & 0xF000) >> 12)
     {
         case 0x00:
@@ -358,7 +369,6 @@ void clockcycle()
                  break;
                 case 0xEE:
                     PC = popstack(); //Return from subroutine call
-                    PC+=2;
                  break;
                 case 0xFB:
                        //scroll screen 4 pixels right 	Super only,not implemented 
@@ -375,7 +385,6 @@ void clockcycle()
                     break;
                 default:
                     //Invalid instruction TODO FIX
-                    SDL_Delay(10000);
                     printf("^INVALID INSTRUCTION(0x%04X)\r\n",opcode);
                     PC+=2;
                     break;
@@ -484,7 +493,6 @@ void clockcycle()
                     break;
                 default:
                     //Invalid instruction
-                    SDL_Delay(10000);
                     printf("^INVALID INSTRUCTION(0x%04X)\r\n",opcode);
                     PC+=2;
                     break;
@@ -554,16 +562,23 @@ void clockcycle()
              }
             break;
         case 0x0e:
-        // TODO TEMP FIX
-        PC+=2;
              switch(opcode & 0x00FF)
              {
                 case 0x9e:
-                    //skip if key (register rk) pressed 	The key is a key number, see the chip-8 documentation 
+                    //skip if key (register rk) pressed 	The key is a key number, see the chip-8 documentation
+                    if(key[V[(opcode & 0x0F00) >> 12]] == 1)
+                        PC+=2;
+                    PC+=2;
                     break;
                 case 0xa1:
-                    //skip if key (register rk) not pressed 
+                    //skip if key (register rk) not pressed
+                    if(key[V[(opcode & 0x0F00) >> 12]] != 1)
+                        PC+=2;
+                    PC+=2;
                     break;
+                default:
+                    printf("^INVALID INSTRUCTION(0x%04X)\r\n",opcode);
+                    PC+=2;
              }
             break;
         case 0x0f:
@@ -576,7 +591,41 @@ void clockcycle()
                     break;
                 case 0x0a:
                     //wait for for keypress,put key in register vr 
-
+                    // TODO BETTER IMPLEMENTATION
+                    {
+                    int pressedkey = 0xff;
+                    SDL_Event event;
+                    while (pressedkey==0xff)
+                    {
+                        while (SDL_PollEvent(&event))
+                        {
+                            printf("EVENT!\n");
+                            if (event.type == SDL_KEYDOWN)
+                            {
+                                printf("KEY!\n");
+                                for (int i = 0; i < 16; i++)
+                                {
+                                    printf("%d\n", event.key.keysym.sym);
+                                    if (event.key.keysym.sym == keymap[i])
+                                    {
+                                        printf("%d",i);
+                                        key[i] = 1;
+                                    }
+                                }
+                            }
+                        }
+                        for(int i = 0; i < 16; i++)
+                        {
+                            if(key[i] == 1)
+                            {
+                                pressedkey=i;
+                                break;
+                            }
+                        }
+                    }
+                    V[(opcode & 0x0f00) >> 8] = pressedkey;
+                    PC+=2;
+                    }
                     break;
                 case 0x15:
                     //set the delay timer to vr   
@@ -620,6 +669,7 @@ void clockcycle()
                         memory[I] = V[i];
                         I+=1;
                     }
+                    PC+=2;
                     break;
                 case 0x65:
                     //load registers v0-vr from location I onwards 	as above. 
@@ -628,12 +678,15 @@ void clockcycle()
                         V[i] = memory[I];
                         I+=1;
                     }
+                    PC+=2;
                     break;
+                default:
+                    printf("^INVALID INSTRUCTION(0x%04X)\r\n",opcode);
+                    PC+=2;
             }
             break;
             default:
                     //Invalid instruction
-                    SDL_Delay(10000);
                     printf("^INVALID INSTRUCTION(0x%04X)\r\n",opcode);
                     PC+=2;
                 break;
