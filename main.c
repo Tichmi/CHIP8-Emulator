@@ -69,9 +69,9 @@ int resetmem();                                                 //Resets memory,
 /*Memory Dump*/
 void memdump(size_t from, size_t to, unsigned int lineSize);    //Dumps memory to std:out for debugging.
 /*Push to stack*/
-int pushstack(unsigned char value);
+int pushstack(unsigned short value);
 /*Pop from stack*/
-unsigned char popstack();
+unsigned short popstack();
 /*Init SDL, create window and renderer*/
 void initSDL();
 /*Destroy window and renderer*/
@@ -141,13 +141,16 @@ void drawingtest()
 }
 
 /*Main function*/
-int main()
+int main( int argc, char *argv[] )
 {
     SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO); 
     initSDL();
     init();
     srand(time(NULL)); /*seed for random*/
-    loadROM("./ROMS/BLINKY");
+    if(argc == 2)
+        loadROM(argv[1]);
+    else
+        loadROM("./ROMS/INVADERS");
     memdump(0x200,4096,16);
     SDL_Event event;
     while(1)
@@ -163,7 +166,7 @@ int main()
             //printf("clearing");
         }
         */
-        SDL_Delay(16);
+        SDL_Delay(2);
         clockcycle();
     }
 
@@ -301,24 +304,18 @@ void loadfont()
 }
 
 
-int pushstack(unsigned char value)
+int pushstack(unsigned short value)
 {
-    size_t elements = sizeof(stack) / sizeof(unsigned char);
-    if(elements >= sizeof(stack))           //Check if stack is already full
-        return -1;                          //Return error
-    else
-        stack[elements] = value;            //Set top of the stack to the value.
-        SP++;
-    return 0;                               //Return without error
+    stack[SP] = value;            //Set top of the stack to the value.
+    SP++;
+    return 0;                     //Return without error
 }
 
-unsigned char popstack()
+unsigned short popstack()
 {
-    size_t elements = sizeof(stack) / sizeof(unsigned char);
-    unsigned char ret = stack[elements];    //Get element from top and store it.
-    stack[elements] = 0;                    //Erase the element
     SP--;
-    return ret;                             //Return the element.
+    unsigned short ret = stack[SP];
+    return ret;                         
 }
 
 void clearscreen()
@@ -341,8 +338,7 @@ void clockcycle()
     unsigned short opcode = memory[PC] << 8 | memory[PC + 1];
     printf("Current Instruction: 0x%04X | ",opcode);
     printf("V[0]:%d V[1]:%d V[2]:%d V[3]:%d V[4]:%d V[5]:%d V[6]:%d V[7]:%d",V[0x0],V[0x1],V[0x2],V[0x3],V[0x4],V[0x5],V[0x6],V[0x7]);
-    printf("V[8]:%d V[9]:%d V[A]:%d V[B]:%d V[C]:%d V[D]:%d V[E]:%d V[F]:%d\r\n",V[0x8],V[0x9],V[0xA],V[0xB],V[0xC],V[0xD],V[0xE],V[0xF]);
-
+    printf("V[8]:%d V[9]:%d V[A]:%d V[B]:%d V[C]:%d V[D]:%d V[E]:%d V[F]:%d SP:%d\r\n",V[0x8],V[0x9],V[0xA],V[0xB],V[0xC],V[0xD],V[0xE],V[0xF],SP);
 
     switch((opcode & 0xF000) >> 12)
     {
@@ -356,7 +352,6 @@ void clockcycle()
                  break;
                 case 0xEE:
                     PC = popstack(); //Return from subroutine call
-                    PC+=2;
                  break;
                 case 0xFB:
                        //scroll screen 4 pixels right 	Super only,not implemented 
@@ -373,7 +368,6 @@ void clockcycle()
                     break;
                 default:
                     //Invalid instruction TODO FIX
-                    SDL_Delay(10000);
                     printf("^INVALID INSTRUCTION(0x%04X)\r\n",opcode);
                     PC+=2;
                     break;
@@ -471,8 +465,8 @@ void clockcycle()
                         V[0xF] = 1; //borrow
                     else
                         V[0xF] = 0;
-                    V[(opcode & 0x00F0) >> 4] -= V[(opcode & 0x0F00) >> 8];              
-                    PC+=2;
+                        V[(opcode & 0x00F0) >> 4] -= V[(opcode & 0x0F00) >> 8];              
+                        PC+=2;
                     break;
                 case 0x0e:
                     //shift register vr left,bit 7 goes into register vf 
@@ -482,7 +476,6 @@ void clockcycle()
                     break;
                 default:
                     //Invalid instruction
-                    SDL_Delay(10000);
                     printf("^INVALID INSTRUCTION(0x%04X)\r\n",opcode);
                     PC+=2;
                     break;
@@ -564,6 +557,11 @@ void clockcycle()
                     //skip if key (register rk) not pressed 
                     PC+=2;
                     break;
+                default:
+                    //Invalid instruction
+                    printf("^INVALID INSTRUCTION(0x%04X)\r\n",opcode);
+                    PC+=2;
+                break;
              }
             break;
         case 0x0f:
@@ -576,7 +574,7 @@ void clockcycle()
                     break;
                 case 0x0a:
                     //wait for for keypress,put key in register vr 
-
+                    PC+=2;
                     break;
                 case 0x15:
                     //set the delay timer to vr   
@@ -620,6 +618,7 @@ void clockcycle()
                         memory[I] = V[i];
                         I+=1;
                     }
+                    PC += 2;
                     break;
                 case 0x65:
                     //load registers v0-vr from location I onwards 	as above. 
@@ -628,12 +627,17 @@ void clockcycle()
                         V[i] = memory[I];
                         I+=1;
                     }
+                    PC += 2;
                     break;
+                default:
+                    //Invalid instruction
+                    printf("^INVALID INSTRUCTION(0x%04X)\r\n",opcode);
+                    PC+=2;
+                break;
             }
             break;
             default:
                     //Invalid instruction
-                    SDL_Delay(10000);
                     printf("^INVALID INSTRUCTION(0x%04X)\r\n",opcode);
                     PC+=2;
                 break;
