@@ -147,12 +147,23 @@ int main()
     initSDL();
     init();
     srand(time(NULL)); /*seed for random*/
-    loadROM("./ROMS/INVADERS");
+    loadROM("./ROMS/BLINKY");
     memdump(0x200,4096,16);
-    
+    SDL_Event event;
     while(1)
     {
-        //sleep(1);
+        /*
+        while(event.type != SDL_KEYDOWN)
+            SDL_WaitEvent(&event);
+
+        SDL_Delay(500);
+        // clear queue
+        while (SDL_PollEvent(&event))
+        {
+            //printf("clearing");
+        }
+        */
+        SDL_Delay(16);
         clockcycle();
     }
 
@@ -328,8 +339,12 @@ int init()
 void clockcycle()
 {
     unsigned short opcode = memory[PC] << 8 | memory[PC + 1];
-    printf("Current Instruction: 0x%04X \r\n",opcode);
-
+    
+    for(int i = 0; i < 16; i++)
+        printf("V%x:%d ", i, V[i]);
+    printf("I:%d SP:%d", I, SP);
+    printf("\n");
+    printf("PC:0x%x \t0x%04X \r\n",PC,opcode);
 
     switch((opcode & 0xF000) >> 12)
     {
@@ -359,7 +374,8 @@ void clockcycle()
                     PC += 2;
                     break;
                 default:
-                    //Invalid instruction
+                    //Invalid instruction TODO FIX
+                    SDL_Delay(10000);
                     printf("^INVALID INSTRUCTION(0x%04X)\r\n",opcode);
                     PC+=2;
                     break;
@@ -374,15 +390,15 @@ void clockcycle()
             PC = opcode & 0x0FFF;
             break;
         case 0x03:
-            //skip if register r = constant 
-            if(V[(opcode & 0x0F00) >> 8] == opcode & 0x00FF)
+            //skip if register r = constant
+            if(V[(opcode & 0x0F00) >> 8] == (opcode & 0x00FF))
                 PC += 4;
             else
                 PC+=2;
             break;
         case 0x04:
             //skip if register r != constant 
-            if(V[(opcode & 0x0F00) >> 8] != opcode & 0x00FF)
+            if(V[(opcode & 0x0F00) >> 8] != (opcode & 0x00FF))
                 PC += 4;
             else
                 PC+=2;
@@ -468,6 +484,7 @@ void clockcycle()
                     break;
                 default:
                     //Invalid instruction
+                    SDL_Delay(10000);
                     printf("^INVALID INSTRUCTION(0x%04X)\r\n",opcode);
                     PC+=2;
                     break;
@@ -537,6 +554,8 @@ void clockcycle()
              }
             break;
         case 0x0e:
+        // TODO TEMP FIX
+        PC+=2;
              switch(opcode & 0x00FF)
              {
                 case 0x9e:
@@ -571,8 +590,12 @@ void clockcycle()
                     break;
                 case 0x1e:
                     //add register vr to the index register 
-                    I +=  V[(opcode & 0x0F00) >> 8];    
-                    PC+=2; 
+                    if(I + V[(opcode & 0x0F00) >> 8] > 0xFFF)
+                        V[0xF] = 1;
+                    else
+                        V[0xF] = 0;
+                    I += V[(opcode & 0x0F00) >> 8];
+                    PC+=2;
                     break;
                 case 0x29:
                     //point I to the sprite for hexadecimal character in vr 	Sprite is 5 bytes high 
@@ -610,6 +633,7 @@ void clockcycle()
             break;
             default:
                     //Invalid instruction
+                    SDL_Delay(10000);
                     printf("^INVALID INSTRUCTION(0x%04X)\r\n",opcode);
                     PC+=2;
                 break;
@@ -664,7 +688,7 @@ int loadROM(const char* path)
     if(!rom)
     {
         printf("ERROR OPENING FILE.");
-        return -1
+        return -1;
     }
     int c;
     size_t index = 0x200;                   //Start writing into memory at 0x200
