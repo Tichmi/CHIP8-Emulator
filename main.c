@@ -147,12 +147,12 @@ int main()
     initSDL();
     init();
     srand(time(NULL)); /*seed for random*/
-    loadROM("./ROMS/INVADERS");
+    loadROM("./ROMS/UFO");
     memdump(0x200,4096,16);
     
     while(1)
     {
-        //sleep(1);
+        SDL_Delay(8);
         clockcycle();
     }
 
@@ -328,7 +328,9 @@ int init()
 void clockcycle()
 {
     unsigned short opcode = memory[PC] << 8 | memory[PC + 1];
-    printf("Current Instruction: 0x%04X \r\n",opcode);
+    printf("Current Instruction: 0x%04X | ",opcode);
+    printf("V[0]:%d V[1]:%d V[2]:%d V[3]:%d V[4]:%d V[5]:%d V[6]:%d V[7]:%d",V[0x0],V[0x1],V[0x2],V[0x3],V[0x4],V[0x5],V[0x6],V[0x7]);
+    printf("V[8]:%d V[9]:%d V[A]:%d V[B]:%d V[C]:%d V[D]:%d V[E]:%d V[F]:%d\r\n",V[0x8],V[0x9],V[0xA],V[0xB],V[0xC],V[0xD],V[0xE],V[0xF]);
 
 
     switch((opcode & 0xF000) >> 12)
@@ -371,19 +373,19 @@ void clockcycle()
         case 0x02:
             //jump to subroutine at address xxx 	16 levels maximum 
             pushstack(PC + 2);
-            PC = opcode & 0x0FFF;
+            PC = (opcode & 0x0FFF);
             break;
         case 0x03:
             //skip if register r = constant 
-            if(V[(opcode & 0x0F00) >> 8] == opcode & 0x00FF)
-                PC += 4;
+            if(V[(opcode & 0x0F00) >> 8] == (opcode & 0x00FF))
+                PC+=4;
             else
                 PC+=2;
             break;
         case 0x04:
             //skip if register r != constant 
-            if(V[(opcode & 0x0F00) >> 8] != opcode & 0x00FF)
-                PC += 4;
+            if(V[(opcode & 0x0F00) >> 8] != (opcode & 0x00FF))
+                PC+=4;
             else
                 PC+=2;
             break;
@@ -396,12 +398,12 @@ void clockcycle()
             break;
         case 0x06:
             //move constant to register r 
-            V[(opcode & 0x0F00) >> 8] = opcode & 0x00FF;
+            V[(opcode & 0x0F00) >> 8] = (opcode & 0x00FF);
             PC+=2;
             break;
         case 0x07:
             //add constant to register r 	No carry generated 
-            V[(opcode & 0x0F00) >> 8] += opcode & 0x00FF;
+            V[(opcode & 0x0F00) >> 8] += (opcode & 0x00FF);
             PC+=2;
             break;
         case 0x08:
@@ -541,9 +543,11 @@ void clockcycle()
              {
                 case 0x9e:
                     //skip if key (register rk) pressed 	The key is a key number, see the chip-8 documentation 
+                    PC+=2;
                     break;
                 case 0xa1:
                     //skip if key (register rk) not pressed 
+                    PC+=2;
                     break;
              }
             break;
@@ -571,7 +575,11 @@ void clockcycle()
                     break;
                 case 0x1e:
                     //add register vr to the index register 
-                    I +=  V[(opcode & 0x0F00) >> 8];    
+                    if(I + V[(opcode & 0x0F00) >> 8] > 0xFFF)
+						V[0xF] = 1;
+					else
+						V[0xF] = 0;
+					I += V[(opcode & 0x0F00) >> 8];
                     PC+=2; 
                     break;
                 case 0x29:
@@ -664,7 +672,7 @@ int loadROM(const char* path)
     if(!rom)
     {
         printf("ERROR OPENING FILE.");
-        return -1
+        return -1;
     }
     int c;
     size_t index = 0x200;                   //Start writing into memory at 0x200
