@@ -147,13 +147,16 @@ void drawingtest()
 }
 
 /*Main function*/
-int main()
+int main( int argc, char *argv[] )
 {
     SDL_Init(SDL_INIT_VIDEO|SDL_INIT_AUDIO); 
     initSDL();
     init();
     srand(time(NULL)); /*seed for random*/
-    loadROM("./ROMS/INVADERS");
+    if(argc == 2)
+        loadROM(argv[1]);
+    else
+        loadROM("./ROMS/INVADERS");
     memdump(0x200,4096,16);
     SDL_Event event;
     loadkeys();
@@ -357,6 +360,7 @@ void clockcycle()
     printf("\n");
     printf("PC:0x%x \t0x%04X \r\n",PC,opcode);
     */
+
     switch((opcode & 0xF000) >> 12)
     {
         case 0x00:
@@ -396,12 +400,12 @@ void clockcycle()
         case 0x02:
             //jump to subroutine at address xxx 	16 levels maximum 
             pushstack(PC + 2);
-            PC = opcode & 0x0FFF;
+            PC = (opcode & 0x0FFF);
             break;
         case 0x03:
-            //skip if register r = constant
+            //skip if register r = constant 
             if(V[(opcode & 0x0F00) >> 8] == (opcode & 0x00FF))
-                PC += 4;
+                PC+=4;
             else
                 PC+=2;
             break;
@@ -421,12 +425,12 @@ void clockcycle()
             break;
         case 0x06:
             //move constant to register r 
-            V[(opcode & 0x0F00) >> 8] = opcode & 0x00FF;
+            V[(opcode & 0x0F00) >> 8] = (opcode & 0x00FF);
             PC+=2;
             break;
         case 0x07:
             //add constant to register r 	No carry generated 
-            V[(opcode & 0x0F00) >> 8] += opcode & 0x00FF;
+            V[(opcode & 0x0F00) >> 8] += (opcode & 0x00FF);
             PC+=2;
             break;
         case 0x08:
@@ -482,8 +486,8 @@ void clockcycle()
                         V[0xF] = 1; //borrow
                     else
                         V[0xF] = 0;
-                    V[(opcode & 0x00F0) >> 4] -= V[(opcode & 0x0F00) >> 8];              
-                    PC+=2;
+                        V[(opcode & 0x00F0) >> 4] -= V[(opcode & 0x0F00) >> 8];              
+                        PC+=2;
                     break;
                 case 0x0e:
                     //shift register vr left,bit 7 goes into register vf 
@@ -669,7 +673,7 @@ void clockcycle()
                         memory[I] = V[i];
                         I+=1;
                     }
-                    PC+=2;
+                    PC += 2;
                     break;
                 case 0x65:
                     //load registers v0-vr from location I onwards 	as above. 
@@ -678,11 +682,13 @@ void clockcycle()
                         V[i] = memory[I];
                         I+=1;
                     }
-                    PC+=2;
+                    PC += 2;
                     break;
                 default:
+                    //Invalid instruction
                     printf("^INVALID INSTRUCTION(0x%04X)\r\n",opcode);
                     PC+=2;
+                break;
             }
             break;
             default:
